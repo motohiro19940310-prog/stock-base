@@ -1,0 +1,25 @@
+import type { MetadataRoute } from 'next'
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'StockBase - 美容室材料管理',
+    short_name: 'StockBase',
+    description: 'スマホ3タップで記録。現場でズレない在庫管理。',
+    start_url: '/dashboard',
+    display: 'standalone',
+    background_color: '#f9fafb',
+    theme_color: '#10b981',
+    icons: [
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+      },
+    ],
+  }
+}
