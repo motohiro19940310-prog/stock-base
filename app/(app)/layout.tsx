@@ -17,8 +17,8 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex flex-col h-full max-w-md mx-auto bg-zinc-950">
-      <main className="flex-1 overflow-y-auto pb-20">{children}</main>
+    <div className="flex flex-col fixed inset-0 max-w-md mx-auto bg-zinc-950">
+      <main className="flex-1 overflow-y-auto">{children}</main>
       <BottomNav />
     </div>
   )
