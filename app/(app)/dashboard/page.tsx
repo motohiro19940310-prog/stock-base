@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import MonthNav from './MonthNav'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>
+}) {
+  const { month } = await searchParams
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,10 +27,14 @@ export default async function DashboardPage() {
   const totalItems = items?.length ?? 0
   const salonName = (profile?.salons as { name: string } | null)?.name ?? 'サロン'
 
-  // 今月の集計
+  // 表示月の決定
   const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString()
+  const targetDate = month ? new Date(`${month}-01`) : now
+  const year = targetDate.getFullYear()
+  const monthIndex = targetDate.getMonth()
+
+  const startOfMonth = new Date(year, monthIndex, 1).toISOString()
+  const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59).toISOString()
 
   const { data: monthlyLogs } = await supabase
     .from('stock_logs')
@@ -50,7 +60,10 @@ export default async function DashboardPage() {
     .filter((l) => l.note === '店販')
     .reduce((sum, l) => sum + Math.abs(l.quantity_change) * (getItem(l)?.profit ?? 0), 0)
 
-  const monthLabel = `${now.getMonth() + 1}月`
+  const monthLabel = `${year}年${monthIndex + 1}月`
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const targetMonthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+  const isCurrentMonth = targetMonthStr === currentMonthStr
 
   return (
     <div className="px-4 py-8 space-y-7">
@@ -117,7 +130,13 @@ export default async function DashboardPage() {
 
       {/* 月次材料費集計 */}
       <div>
-        <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">{monthLabel}の集計</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-zinc-500 uppercase tracking-widest">{monthLabel}の集計</p>
+          {!isCurrentMonth && (
+            <span className="text-xs text-zinc-600">過去データ</span>
+          )}
+        </div>
+        <MonthNav currentMonth={targetMonthStr} maxMonth={currentMonthStr} />
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800/60 divide-y divide-zinc-800/60">
           <div className="flex justify-between items-center px-5 py-4">
             <div>
