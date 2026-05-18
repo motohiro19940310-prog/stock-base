@@ -18,7 +18,8 @@ export default function InviteSection({ salonId }: { salonId: string }) {
       .single()
 
     if (data) {
-      setLink(`${window.location.origin}/invite/${data.token}`)
+      const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin
+      setLink(`${base}/invite/${data.token}`)
     }
     setLoading(false)
   }
