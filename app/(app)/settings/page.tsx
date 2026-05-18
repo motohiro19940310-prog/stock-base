@@ -1,12 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
+import InviteSection from '@/components/InviteSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*, salons(name)')
+    .eq('id', user?.id ?? '')
     .single()
 
   return (
@@ -31,6 +35,7 @@ export default async function SettingsPage() {
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">バージョン</p>
           <p className="font-medium text-zinc-400">0.1.0</p>
         </div>
+        <InviteSection salonId={(profile?.salons as { id?: string } | null)?.id ?? profile?.salon_id ?? ''} />
       </div>
 
       <div className="mt-6">
