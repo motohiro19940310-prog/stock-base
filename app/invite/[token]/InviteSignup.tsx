@@ -55,8 +55,6 @@ export default function InviteSignup({
     const { error: profileError } = await supabase.from('profiles').upsert({
       id: userId,
       salon_id: salonId,
-      full_name: name,
-      role: 'staff',
     })
 
     if (profileError) {
