@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import StockUpdateForm from '@/components/StockUpdateForm'
+import StockPanel from '@/components/StockPanel'
 
 export default async function ItemDetailPage({
   params,
@@ -51,27 +51,7 @@ export default async function ItemDetailPage({
         </Link>
       </div>
 
-      {/* Stock Display */}
-      <div
-        className={`rounded-2xl p-8 mb-6 text-center border ${
-          isLow
-            ? 'bg-red-500/10 border-red-500/20'
-            : 'bg-emerald-500/10 border-emerald-500/20'
-        }`}
-      >
-        <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">現在の在庫</p>
-        <p className={`text-6xl font-bold mb-2 ${isLow ? 'text-red-400' : 'text-emerald-400'}`}>
-          {item.quantity}
-        </p>
-        <p className="text-zinc-400 text-sm">{item.unit}</p>
-        {isLow && (
-          <p className="mt-3 text-xs text-red-400 font-medium bg-red-500/10 px-3 py-1.5 rounded-full inline-block">
-            ⚠ 残量が少なくなっています
-          </p>
-        )}
-      </div>
-
-      <StockUpdateForm item={item} />
+      <StockPanel item={item} />
 
       {/* 販売金額・利益 */}
       {(item.selling_price > 0 || item.cost_price > 0) && (
