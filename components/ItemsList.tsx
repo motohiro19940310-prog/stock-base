@@ -23,12 +23,14 @@ function SwipeItem({
   isDragOver,
   onDragHandleStart,
   onPinToggle,
+  onDelete,
 }: {
   item: Item
   isDragging: boolean
   isDragOver: boolean
   onDragHandleStart: (e: React.TouchEvent | React.MouseEvent) => void
   onPinToggle: () => void
+  onDelete: () => void
 }) {
   const router = useRouter()
   const [offsetX, setOffsetX] = useState(0)
@@ -92,7 +94,7 @@ function SwipeItem({
     setDeleting(true)
     const supabase = createClient()
     await supabase.from('items').delete().eq('id', item.id)
-    router.refresh()
+    onDelete()
   }
 
   return (
@@ -167,8 +169,9 @@ function SwipeItem({
   )
 }
 
-export default function ItemsList({ items: initialItems }: { items: Item[] }) {
+export default function ItemsList({ items: initialItems, onMutate }: { items: Item[]; onMutate?: () => void }) {
   const router = useRouter()
+  const refresh = () => { if (onMutate) onMutate(); else router.refresh() }
   const [items, setItems] = useState(initialItems)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null)
@@ -190,7 +193,7 @@ export default function ItemsList({ items: initialItems }: { items: Item[] }) {
     const next = !item.is_pinned
     setItems((prev) => prev.map((i) => i.id === itemId ? { ...i, is_pinned: next } : i))
     await supabase.from('items').update({ is_pinned: next }).eq('id', itemId)
-    router.refresh()
+    refresh()
   }
 
   function getTargetIndex(clientY: number): number {
@@ -237,7 +240,7 @@ export default function ItemsList({ items: initialItems }: { items: Item[] }) {
             supabase.from('items').update({ sort_order: idx }).eq('id', item.id)
           )
         )
-        router.refresh()
+        refresh()
       }
 
       draggingRef.current = null
@@ -267,6 +270,7 @@ export default function ItemsList({ items: initialItems }: { items: Item[] }) {
         isDragOver={dragOverIdx === index && draggingIdx !== index}
         onDragHandleStart={(e) => onDragHandleStart(index, e)}
         onPinToggle={() => handlePinToggle(item.id)}
+        onDelete={refresh}
       />
     )
   }

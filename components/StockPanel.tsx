@@ -13,7 +13,7 @@ type Item = {
   alert_threshold: number
 }
 
-export default function StockPanel({ item }: { item: Item }) {
+export default function StockPanel({ item, onUpdate }: { item: Item; onUpdate?: () => void }) {
   const router = useRouter()
   const [quantity, setQuantity] = useState(item.quantity)
   const [amount, setAmount] = useState('')
@@ -53,7 +53,9 @@ export default function StockPanel({ item }: { item: Item }) {
     }
 
     setPending(false)
-    router.refresh() // バックグラウンドで最新状態を同期
+    // SWRキャッシュを再取得、なければrouter.refresh
+    if (onUpdate) onUpdate()
+    else router.refresh()
   }
 
   async function handleUpdate(type: 'floor' | 'retail' | 'restock') {

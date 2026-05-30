@@ -1,16 +1,38 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
 import Link from 'next/link'
+import { useItems } from '@/lib/hooks/useItems'
 import ItemsList from '@/components/ItemsList'
 
-export default async function ItemsPage() {
-  const supabase = await createClient()
+function ItemsSkeleton() {
+  return (
+    <div className="px-4 py-8 animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <div className="h-3 w-16 bg-zinc-800 rounded mb-2" />
+          <div className="h-7 w-24 bg-zinc-700 rounded" />
+        </div>
+        <div className="h-8 w-16 bg-zinc-800 rounded-full" />
+      </div>
+      <div className="space-y-2">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="bg-zinc-900 rounded-xl px-4 py-4 border border-zinc-800/60 flex justify-between items-center">
+            <div>
+              <div className="h-4 w-28 bg-zinc-700 rounded mb-2" />
+              <div className="h-3 w-16 bg-zinc-800 rounded" />
+            </div>
+            <div className="h-6 w-12 bg-zinc-700 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-  const { data: items } = await supabase
-    .from('items')
-    .select('*')
-    .order('is_pinned', { ascending: false })
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: true })
+export default function ItemsPage() {
+  const { data: items, isLoading, mutate } = useItems()
+
+  if (isLoading) return <ItemsSkeleton />
 
   return (
     <div className="px-4 py-8">
@@ -20,14 +42,12 @@ export default async function ItemsPage() {
           <h1 className="text-2xl font-bold text-white">在庫一覧</h1>
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/items/import"
+          <Link href="/items/import"
             className="border border-zinc-700 text-zinc-300 px-3 py-2 rounded-full text-xs font-medium active:bg-zinc-800"
           >
             CSV
           </Link>
-          <Link
-            href="/items/new"
+          <Link href="/items/new"
             className="bg-emerald-500 text-white px-4 py-2 rounded-full text-xs font-bold tracking-wide active:bg-emerald-400"
           >
             + 追加
@@ -44,7 +64,7 @@ export default async function ItemsPage() {
           </Link>
         </div>
       ) : (
-        <ItemsList items={items} />
+        <ItemsList items={items} onMutate={mutate} />
       )}
     </div>
   )

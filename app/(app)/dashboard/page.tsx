@@ -1,117 +1,107 @@
-import { createClient } from '@/lib/supabase/server'
+'use client'
+
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { useDashboard } from '@/lib/hooks/useDashboard'
 import MonthNav from './MonthNav'
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ month?: string }>
-}) {
-  const { month } = await searchParams
-  const supabase = await createClient()
+type LogWithItem = {
+  quantity_change: number
+  note: string | null
+  items: { cost_price: number; selling_price: number; profit: number } | { cost_price: number; selling_price: number; profit: number }[] | null
+}
 
-  const { data: { user } } = await supabase.auth.getUser()
+function getItem(l: LogWithItem) {
+  return Array.isArray(l.items) ? l.items[0] ?? null : l.items
+}
 
-  // 表示月の決定（DBクエリより先に計算）
+function DashboardSkeleton() {
+  return (
+    <div className="px-4 py-8 space-y-7 animate-pulse">
+      <div>
+        <div className="h-3 w-20 bg-zinc-800 rounded mb-2" />
+        <div className="h-7 w-36 bg-zinc-700 rounded" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {[0, 1].map((i) => (
+          <div key={i} className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800/60">
+            <div className="h-3 w-20 bg-zinc-800 rounded mb-4" />
+            <div className="h-10 w-12 bg-zinc-700 rounded" />
+          </div>
+        ))}
+      </div>
+      <div>
+        <div className="h-3 w-24 bg-zinc-800 rounded mb-3" />
+        <div className="bg-zinc-900 rounded-2xl border border-zinc-800/60 divide-y divide-zinc-800/60">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex justify-between items-center px-5 py-4">
+              <div className="h-4 w-24 bg-zinc-800 rounded" />
+              <div className="h-5 w-16 bg-zinc-700 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DashboardContent() {
+  const searchParams = useSearchParams()
+  const month = searchParams.get('month') ?? undefined
+
   const now = new Date()
-  const targetDate = month ? new Date(`${month}-01`) : now
-  const year = targetDate.getFullYear()
-  const monthIndex = targetDate.getMonth()
-  const startOfMonth = new Date(year, monthIndex, 1).toISOString()
-  const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59).toISOString()
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  // 3クエリを並列実行（直列→並列で約3倍速）
-  const [
-    { data: profile },
-    { data: items },
-    { data: monthlyLogs },
-  ] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('*, salons(name)')
-      .eq('id', user?.id ?? '')
-      .single(),
-    supabase
-      .from('items')
-      .select('*')
-      .order('quantity', { ascending: true }),
-    supabase
-      .from('stock_logs')
-      .select('quantity_change, note, items(cost_price, selling_price, profit)')
-      .gte('created_at', startOfMonth)
-      .lte('created_at', endOfMonth)
-      .lt('quantity_change', 0),
-  ])
+  const { data, isLoading, monthLabel, monthStr, isCurrentMonth } = useDashboard(month)
 
-  const lowStockItems = items?.filter((item) => item.quantity <= item.alert_threshold) ?? []
-  const totalItems = items?.length ?? 0
+  if (isLoading) return <DashboardSkeleton />
+
+  const items = data?.items ?? []
+  const monthlyLogs = (data?.monthlyLogs ?? []) as unknown as LogWithItem[]
+  const profile = data?.profile
   const salonName = (profile?.salons as { name: string } | null)?.name ?? 'サロン'
+  const lowStockItems = items.filter((item) => item.quantity <= item.alert_threshold)
+  const totalItems = items.length
 
-  type LogWithItem = { quantity_change: number; note: string | null; items: { cost_price: number; selling_price: number; profit: number } | { cost_price: number; selling_price: number; profit: number }[] | null }
-  const logs = (monthlyLogs ?? []) as unknown as LogWithItem[]
-
-  const getItem = (l: LogWithItem) => Array.isArray(l.items) ? l.items[0] ?? null : l.items
-
-  const floorCost = logs
+  const floorCost = monthlyLogs
     .filter((l) => l.note === 'フロア')
     .reduce((sum, l) => sum + Math.abs(l.quantity_change) * (getItem(l)?.cost_price ?? 0), 0)
-
-  const retailSales = logs
+  const retailSales = monthlyLogs
     .filter((l) => l.note === '店販')
     .reduce((sum, l) => sum + Math.abs(l.quantity_change) * (getItem(l)?.selling_price ?? 0), 0)
-
-  const retailProfit = logs
+  const retailProfit = monthlyLogs
     .filter((l) => l.note === '店販')
     .reduce((sum, l) => sum + Math.abs(l.quantity_change) * (getItem(l)?.profit ?? 0), 0)
 
-  const monthLabel = `${year}年${monthIndex + 1}月`
-  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const targetMonthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
-  const isCurrentMonth = targetMonthStr === currentMonthStr
-
   return (
     <div className="px-4 py-8 space-y-7">
-      {/* Header */}
       <div>
         <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Dashboard</p>
         <h1 className="text-2xl font-bold text-white">{salonName}</h1>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800/60">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">登録アイテム</p>
           <p className="text-4xl font-bold text-white">{totalItems}</p>
           <p className="text-xs text-zinc-600 mt-1">点</p>
         </div>
-        <div
-          className={`rounded-2xl p-5 border ${
-            lowStockItems.length > 0
-              ? 'bg-red-500/10 border-red-500/20'
-              : 'bg-zinc-900 border-zinc-800/60'
-          }`}
-        >
+        <div className={`rounded-2xl p-5 border ${lowStockItems.length > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-zinc-900 border-zinc-800/60'}`}>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">残量アラート</p>
-          <p
-            className={`text-4xl font-bold ${
-              lowStockItems.length > 0 ? 'text-red-400' : 'text-white'
-            }`}
-          >
+          <p className={`text-4xl font-bold ${lowStockItems.length > 0 ? 'text-red-400' : 'text-white'}`}>
             {lowStockItems.length}
           </p>
           <p className="text-xs text-zinc-600 mt-1">件</p>
         </div>
       </div>
 
-      {/* Low Stock Alerts */}
       {lowStockItems.length > 0 && (
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">残量アラート</p>
           <div className="space-y-2">
             {lowStockItems.slice(0, 5).map((item) => (
-              <Link
-                key={item.id}
-                href={`/items/${item.id}`}
+              <Link key={item.id} href={`/items/${item.id}`}
                 className="flex items-center justify-between bg-zinc-900 rounded-xl px-4 py-3.5 border border-zinc-800/60 active:bg-zinc-800"
               >
                 <div>
@@ -119,12 +109,8 @@ export default async function DashboardPage({
                   <p className="text-xs text-zinc-500 mt-0.5">{item.category ?? '未分類'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-red-400">
-                    {item.quantity}{item.unit}
-                  </p>
-                  <p className="text-xs text-zinc-600">
-                    下限 {item.alert_threshold}{item.unit}
-                  </p>
+                  <p className="font-bold text-red-400">{item.quantity}{item.unit}</p>
+                  <p className="text-xs text-zinc-600">下限 {item.alert_threshold}{item.unit}</p>
                 </div>
               </Link>
             ))}
@@ -132,15 +118,12 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {/* 月次材料費集計 */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-zinc-500 uppercase tracking-widest">{monthLabel}の集計</p>
-          {!isCurrentMonth && (
-            <span className="text-xs text-zinc-600">過去データ</span>
-          )}
+          {!isCurrentMonth && <span className="text-xs text-zinc-600">過去データ</span>}
         </div>
-        <MonthNav currentMonth={targetMonthStr} maxMonth={currentMonthStr} />
+        <MonthNav currentMonth={monthStr} maxMonth={currentMonthStr} />
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800/60 divide-y divide-zinc-800/60">
           <div className="flex justify-between items-center px-5 py-4">
             <div>
@@ -166,18 +149,15 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div>
         <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">クイックアクション</p>
         <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/items/new"
+          <Link href="/items/new"
             className="bg-emerald-500 text-white rounded-xl py-4 text-center text-sm font-bold tracking-wide active:bg-emerald-400"
           >
             + アイテム追加
           </Link>
-          <Link
-            href="/items"
+          <Link href="/items"
             className="bg-zinc-900 text-zinc-300 rounded-xl py-4 text-center text-sm font-medium border border-zinc-800 active:bg-zinc-800"
           >
             在庫一覧
@@ -185,5 +165,13 @@ export default async function DashboardPage({
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
   )
 }
