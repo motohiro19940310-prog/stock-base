@@ -12,36 +12,40 @@ export default async function DashboardPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, salons(name)')
-    .eq('id', user?.id ?? '')
-    .single()
-
-  const { data: items } = await supabase
-    .from('items')
-    .select('*')
-    .order('quantity', { ascending: true })
-
-  const lowStockItems = items?.filter((item) => item.quantity <= item.alert_threshold) ?? []
-  const totalItems = items?.length ?? 0
-  const salonName = (profile?.salons as { name: string } | null)?.name ?? 'サロン'
-
-  // 表示月の決定
+  // 表示月の決定（DBクエリより先に計算）
   const now = new Date()
   const targetDate = month ? new Date(`${month}-01`) : now
   const year = targetDate.getFullYear()
   const monthIndex = targetDate.getMonth()
-
   const startOfMonth = new Date(year, monthIndex, 1).toISOString()
   const endOfMonth = new Date(year, monthIndex + 1, 0, 23, 59, 59).toISOString()
 
-  const { data: monthlyLogs } = await supabase
-    .from('stock_logs')
-    .select('quantity_change, note, items(cost_price, selling_price, profit)')
-    .gte('created_at', startOfMonth)
-    .lte('created_at', endOfMonth)
-    .lt('quantity_change', 0)
+  // 3クエリを並列実行（直列→並列で約3倍速）
+  const [
+    { data: profile },
+    { data: items },
+    { data: monthlyLogs },
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('*, salons(name)')
+      .eq('id', user?.id ?? '')
+      .single(),
+    supabase
+      .from('items')
+      .select('*')
+      .order('quantity', { ascending: true }),
+    supabase
+      .from('stock_logs')
+      .select('quantity_change, note, items(cost_price, selling_price, profit)')
+      .gte('created_at', startOfMonth)
+      .lte('created_at', endOfMonth)
+      .lt('quantity_change', 0),
+  ])
+
+  const lowStockItems = items?.filter((item) => item.quantity <= item.alert_threshold) ?? []
+  const totalItems = items?.length ?? 0
+  const salonName = (profile?.salons as { name: string } | null)?.name ?? 'サロン'
 
   type LogWithItem = { quantity_change: number; note: string | null; items: { cost_price: number; selling_price: number; profit: number } | { cost_price: number; selling_price: number; profit: number }[] | null }
   const logs = (monthlyLogs ?? []) as unknown as LogWithItem[]

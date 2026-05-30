@@ -11,15 +11,17 @@ export default async function ItemDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: item } = await supabase.from('items').select('*').eq('id', id).single()
+  // 2クエリを並列実行（item.idではなくURLのidを直接使う）
+  const [{ data: item }, { data: logs }] = await Promise.all([
+    supabase.from('items').select('*').eq('id', id).single(),
+    supabase
+      .from('stock_logs')
+      .select('*')
+      .eq('item_id', id)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
   if (!item) notFound()
-
-  const { data: logs } = await supabase
-    .from('stock_logs')
-    .select('*')
-    .eq('item_id', item.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
 
   const isLow = item.quantity <= item.alert_threshold
   const displayProfit =
