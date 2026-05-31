@@ -6,7 +6,7 @@ export function useLogs() {
     const supabase = createClient()
     const { data } = await supabase
       .from('stock_logs')
-      .select('*, items(name, unit)')
+      .select('*, item_id, salon_id, items(name, unit)')
       .order('created_at', { ascending: false })
       .limit(50)
     return data ?? []

@@ -1,6 +1,8 @@
 'use client'
 
+import { useState } from 'react'
 import { useLogs } from '@/lib/hooks/useLogs'
+import { createClient } from '@/lib/supabase/client'
 
 function LogsSkeleton() {
   return (
@@ -25,7 +27,38 @@ function LogsSkeleton() {
 }
 
 export default function LogsPage() {
-  const { data: logs, isLoading } = useLogs()
+  const { data: logs, isLoading, mutate } = useLogs()
+  const [undoingId, setUndoingId] = useState<string | null>(null)
+
+  async function handleUndo(log: {
+    id: string
+    item_id: string
+    quantity_change: number
+  }) {
+    setUndoingId(log.id)
+    const supabase = createClient()
+
+    const { data: item } = await supabase
+      .from('items')
+      .select('quantity')
+      .eq('id', log.item_id)
+      .single()
+
+    if (!item) { setUndoingId(null); return }
+
+    const newQuantity = item.quantity + (-log.quantity_change)
+    if (newQuantity < 0) {
+      alert('在庫数がマイナスになるため取消できません')
+      setUndoingId(null)
+      return
+    }
+
+    await supabase.from('items').update({ quantity: newQuantity }).eq('id', log.item_id)
+    await supabase.from('stock_logs').delete().eq('id', log.id)
+
+    await mutate()
+    setUndoingId(null)
+  }
 
   if (isLoading) return <LogsSkeleton />
 
@@ -46,12 +79,14 @@ export default function LogsPage() {
       <div className="space-y-2">
         {logs?.map((log) => {
           const logItem = log.items as { name: string; unit: string } | null
+          const isUndoing = undoingId === log.id
+
           return (
             <div key={log.id}
-              className="bg-zinc-900 rounded-xl px-4 py-4 border border-zinc-800/60 flex justify-between items-center"
+              className="bg-zinc-900 rounded-xl px-4 py-4 border border-zinc-800/60 flex justify-between items-center gap-3"
             >
-              <div>
-                <p className="font-medium text-white text-sm">{logItem?.name}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-white text-sm truncate">{logItem?.name}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">
                   {log.note ?? (log.quantity_change < 0 ? '使用' : '補充')} ·{' '}
                   {new Date(log.created_at).toLocaleDateString('ja-JP', {
@@ -59,9 +94,18 @@ export default function LogsPage() {
                   })}
                 </p>
               </div>
-              <p className={`font-bold text-lg ${log.quantity_change < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                {log.quantity_change > 0 ? '+' : ''}{log.quantity_change}{logItem?.unit}
-              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <p className={`font-bold text-lg ${log.quantity_change < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {log.quantity_change > 0 ? '+' : ''}{log.quantity_change}{logItem?.unit}
+                </p>
+                <button
+                  onClick={() => handleUndo(log as Parameters<typeof handleUndo>[0])}
+                  disabled={isUndoing || !!undoingId}
+                  className="text-xs text-zinc-500 border border-zinc-700 rounded-lg px-2 py-1 active:bg-zinc-800 disabled:opacity-30"
+                >
+                  {isUndoing ? '…' : '取消'}
+                </button>
+              </div>
             </div>
           )
         })}
