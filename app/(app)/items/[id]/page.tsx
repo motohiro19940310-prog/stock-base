@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useItemDetail } from '@/lib/hooks/useItemDetail'
+import { createClient } from '@/lib/supabase/client'
 import StockPanel from '@/components/StockPanel'
 
 function DetailSkeleton() {
@@ -33,8 +35,41 @@ function DetailSkeleton() {
 export default function ItemDetailPage() {
   const params = useParams()
   const id = params.id as string
+  const [undoingId, setUndoingId] = useState<string | null>(null)
 
   const { data, isLoading, mutate } = useItemDetail(id)
+
+  async function handleUndo(log: { id: string; item_id: string; quantity_change: number }) {
+    setUndoingId(log.id)
+    const supabase = createClient()
+
+    const { data: fresh } = await supabase
+      .from('items').select('quantity').eq('id', log.item_id).single()
+
+    if (!fresh) { setUndoingId(null); return }
+
+    const newQuantity = fresh.quantity + (-log.quantity_change)
+    if (newQuantity < 0) {
+      alert('在庫数がマイナスになるため取消できません')
+      setUndoingId(null)
+      return
+    }
+
+    // 楽観的にキャッシュを更新（即時反映）
+    mutate(
+      (current) => current ? {
+        item: { ...current.item, quantity: newQuantity },
+        logs: current.logs.filter((l) => l.id !== log.id),
+      } : current,
+      false
+    )
+
+    await supabase.from('items').update({ quantity: newQuantity }).eq('id', log.item_id)
+    await supabase.from('stock_logs').delete().eq('id', log.id)
+
+    setUndoingId(null)
+    mutate()
+  }
 
   if (isLoading) return <DetailSkeleton />
   if (!data?.item) return <div className="px-4 py-8 text-zinc-400">アイテムが見つかりません</div>
@@ -66,10 +101,8 @@ export default function ItemDetailPage() {
         </Link>
       </div>
 
-      {/* 在庫表示 + 更新フォーム（楽観的UI） */}
       <StockPanel item={item} onUpdate={mutate} />
 
-      {/* 販売金額・利益 */}
       {(item.selling_price > 0 || item.cost_price > 0) && (
         <div className="mt-4 bg-zinc-900 rounded-2xl border border-zinc-800/60 divide-y divide-zinc-800/60">
           {item.cost_price > 0 && (
@@ -99,28 +132,39 @@ export default function ItemDetailPage() {
         </div>
       )}
 
-      {/* 更新履歴 */}
       {logs.length > 0 && (
         <div className="mt-7">
           <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">更新履歴</p>
           <div className="space-y-2">
-            {logs.map((log) => (
-              <div key={log.id}
-                className="bg-zinc-900 rounded-xl px-4 py-3.5 border border-zinc-800/60 flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm text-zinc-300">{log.note ?? (log.quantity_change < 0 ? '使用' : '補充')}</p>
-                  <p className="text-xs text-zinc-600 mt-0.5">
-                    {new Date(log.created_at).toLocaleDateString('ja-JP', {
-                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                    })}
-                  </p>
+            {logs.map((log) => {
+              const isUndoing = undoingId === log.id
+              return (
+                <div key={log.id}
+                  className="bg-zinc-900 rounded-xl px-4 py-3.5 border border-zinc-800/60 flex justify-between items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-300">{log.note ?? (log.quantity_change < 0 ? '使用' : '補充')}</p>
+                    <p className="text-xs text-zinc-600 mt-0.5">
+                      {new Date(log.created_at).toLocaleDateString('ja-JP', {
+                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className={`font-bold ${log.quantity_change < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                      {log.quantity_change > 0 ? '+' : ''}{log.quantity_change}{item.unit}
+                    </p>
+                    <button
+                      onClick={() => handleUndo(log)}
+                      disabled={isUndoing || !!undoingId}
+                      className="text-xs text-zinc-500 border border-zinc-700 rounded-lg px-2 py-1 active:bg-zinc-800 disabled:opacity-30"
+                    >
+                      {isUndoing ? '…' : '取消'}
+                    </button>
+                  </div>
                 </div>
-                <p className={`font-bold ${log.quantity_change < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                  {log.quantity_change > 0 ? '+' : ''}{log.quantity_change}{item.unit}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

@@ -11,5 +11,5 @@ export function useItems() {
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
     return data ?? []
-  }, { revalidateOnFocus: false })
+  }, { revalidateOnFocus: false, dedupingInterval: 3000 })
 }

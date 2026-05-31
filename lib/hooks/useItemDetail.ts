@@ -17,5 +17,5 @@ export function useItemDetail(id: string) {
       item: itemResult.data,
       logs: logsResult.data ?? [],
     }
-  }, { revalidateOnFocus: false })
+  }, { revalidateOnFocus: false, dedupingInterval: 2000 })
 }

@@ -10,5 +10,5 @@ export function useLogs() {
       .order('created_at', { ascending: false })
       .limit(50)
     return data ?? []
-  }, { revalidateOnFocus: false })
+  }, { revalidateOnFocus: false, dedupingInterval: 2000 })
 }

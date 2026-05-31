@@ -45,7 +45,7 @@ export function useDashboard(targetMonth?: string) {
       items: itemsResult.data ?? [],
       monthlyLogs: logsResult.data ?? [],
     }
-  }, { revalidateOnFocus: false })
+  }, { revalidateOnFocus: false, dedupingInterval: 5000 })
 
   return { data, isLoading, mutate, ...range }
 }
