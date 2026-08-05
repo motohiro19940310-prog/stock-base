@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useLogs } from '@/lib/hooks/useLogs'
 import { createClient } from '@/lib/supabase/client'
+import MonthNav from '../dashboard/MonthNav'
 
 function LogsSkeleton() {
   return (
@@ -26,8 +28,14 @@ function LogsSkeleton() {
   )
 }
 
-export default function LogsPage() {
-  const { data: logs, isLoading, mutate } = useLogs()
+function LogsContent() {
+  const searchParams = useSearchParams()
+  const month = searchParams.get('month') ?? undefined
+
+  const now = new Date()
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const { data: logs, isLoading, mutate, monthLabel, monthStr, isCurrentMonth } = useLogs(month)
   const [undoingId, setUndoingId] = useState<string | null>(null)
 
   async function handleUndo(log: {
@@ -66,13 +74,18 @@ export default function LogsPage() {
     <div className="px-4 py-8">
       <div className="mb-6">
         <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">History</p>
-        <h1 className="text-2xl font-bold text-white">更新履歴</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">{monthLabel}の更新履歴</h1>
+          {!isCurrentMonth && <span className="text-xs text-zinc-600">過去データ</span>}
+        </div>
       </div>
+
+      <MonthNav currentMonth={monthStr} maxMonth={currentMonthStr} basePath="/logs" />
 
       {(!logs || logs.length === 0) && (
         <div className="text-center py-20">
           <p className="text-5xl mb-4">📋</p>
-          <p className="font-medium text-zinc-400">まだ履歴がありません</p>
+          <p className="font-medium text-zinc-400">この月の履歴はありません</p>
         </div>
       )}
 
@@ -111,5 +124,13 @@ export default function LogsPage() {
         })}
       </div>
     </div>
+  )
+}
+
+export default function LogsPage() {
+  return (
+    <Suspense fallback={<LogsSkeleton />}>
+      <LogsContent />
+    </Suspense>
   )
 }
