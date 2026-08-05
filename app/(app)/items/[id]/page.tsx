@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useItemDetail } from '@/lib/hooks/useItemDetail'
 import { createClient } from '@/lib/supabase/client'
 import StockPanel from '@/components/StockPanel'
+import MonthNav from '../../dashboard/MonthNav'
 
 function DetailSkeleton() {
   return (
@@ -32,12 +33,17 @@ function DetailSkeleton() {
   )
 }
 
-export default function ItemDetailPage() {
+function ItemDetailContent() {
   const params = useParams()
   const id = params.id as string
+  const searchParams = useSearchParams()
+  const month = searchParams.get('month') ?? undefined
   const [undoingId, setUndoingId] = useState<string | null>(null)
 
-  const { data, isLoading, mutate } = useItemDetail(id)
+  const now = new Date()
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const { data, isLoading, mutate, monthLabel, monthStr, isCurrentMonth } = useItemDetail(id, month)
 
   async function handleUndo(log: { id: string; item_id: string; quantity_change: number }) {
     setUndoingId(log.id)
@@ -132,9 +138,15 @@ export default function ItemDetailPage() {
         </div>
       )}
 
-      {logs.length > 0 && (
-        <div className="mt-7">
-          <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">更新履歴</p>
+      <div className="mt-7">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-zinc-500 uppercase tracking-widest">{monthLabel}の更新履歴</p>
+          {!isCurrentMonth && <span className="text-xs text-zinc-600">過去データ</span>}
+        </div>
+        <MonthNav currentMonth={monthStr} maxMonth={currentMonthStr} basePath={`/items/${id}`} />
+        {logs.length === 0 ? (
+          <p className="text-sm text-zinc-600 text-center py-6">この月の更新履歴はありません</p>
+        ) : (
           <div className="space-y-2">
             {logs.map((log) => {
               const isUndoing = undoingId === log.id
@@ -166,8 +178,16 @@ export default function ItemDetailPage() {
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
+  )
+}
+
+export default function ItemDetailPage() {
+  return (
+    <Suspense fallback={<DetailSkeleton />}>
+      <ItemDetailContent />
+    </Suspense>
   )
 }

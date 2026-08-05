@@ -23,14 +23,6 @@ function DashboardSkeleton() {
         <div className="h-3 w-20 bg-zinc-800 rounded mb-2" />
         <div className="h-7 w-36 bg-zinc-700 rounded" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        {[0, 1].map((i) => (
-          <div key={i} className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800/60">
-            <div className="h-3 w-20 bg-zinc-800 rounded mb-4" />
-            <div className="h-10 w-12 bg-zinc-700 rounded" />
-          </div>
-        ))}
-      </div>
       <div>
         <div className="h-3 w-24 bg-zinc-800 rounded mb-3" />
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800/60 divide-y divide-zinc-800/60">
@@ -57,12 +49,9 @@ function DashboardContent() {
 
   if (isLoading) return <DashboardSkeleton />
 
-  const items = data?.items ?? []
   const monthlyLogs = (data?.monthlyLogs ?? []) as unknown as LogWithItem[]
   const profile = data?.profile
   const salonName = (profile?.salons as { name: string } | null)?.name ?? 'サロン'
-  const lowStockItems = items.filter((item) => item.quantity <= item.alert_threshold)
-  const totalItems = items.length
 
   const floorCost = monthlyLogs
     .filter((l) => l.note === 'フロア')
@@ -80,43 +69,6 @@ function DashboardContent() {
         <p className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Dashboard</p>
         <h1 className="text-2xl font-bold text-white">{salonName}</h1>
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800/60">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">登録アイテム</p>
-          <p className="text-4xl font-bold text-white">{totalItems}</p>
-          <p className="text-xs text-zinc-600 mt-1">点</p>
-        </div>
-        <div className={`rounded-2xl p-5 border ${lowStockItems.length > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-zinc-900 border-zinc-800/60'}`}>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-3">残量アラート</p>
-          <p className={`text-4xl font-bold ${lowStockItems.length > 0 ? 'text-red-400' : 'text-white'}`}>
-            {lowStockItems.length}
-          </p>
-          <p className="text-xs text-zinc-600 mt-1">件</p>
-        </div>
-      </div>
-
-      {lowStockItems.length > 0 && (
-        <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-widest mb-3">残量アラート</p>
-          <div className="space-y-2">
-            {lowStockItems.slice(0, 5).map((item) => (
-              <Link key={item.id} href={`/items/${item.id}`}
-                className="flex items-center justify-between bg-zinc-900 rounded-xl px-4 py-3.5 border border-zinc-800/60 active:bg-zinc-800"
-              >
-                <div>
-                  <p className="font-medium text-white text-sm">{item.name}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{item.category ?? '未分類'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-red-400">{item.quantity}{item.unit}</p>
-                  <p className="text-xs text-zinc-600">下限 {item.alert_threshold}{item.unit}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div>
         <div className="flex items-center justify-between mb-3">

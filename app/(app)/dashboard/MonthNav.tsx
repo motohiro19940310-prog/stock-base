@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation'
 export default function MonthNav({
   currentMonth,
   maxMonth,
+  basePath = '/dashboard',
 }: {
   currentMonth: string
   maxMonth: string
+  basePath?: string
 }) {
   const router = useRouter()
 
@@ -23,9 +25,9 @@ export default function MonthNav({
 
   function go(month: string) {
     if (month === maxMonth) {
-      router.push('/dashboard')
+      router.push(basePath)
     } else {
-      router.push(`/dashboard?month=${month}`)
+      router.push(`${basePath}?month=${month}`)
     }
   }
 
