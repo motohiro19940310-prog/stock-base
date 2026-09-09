@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 const OWNER_EMAIL = 'motohiro19940310@gmail.com'
@@ -18,7 +19,9 @@ async function updatePlan(formData: FormData) {
 
   const salonId = formData.get('salon_id') as string
   const plan = formData.get('plan') as string
-  await supabase.from('salons').update({ plan }).eq('id', salonId)
+  // salonsはRLSでsalon_id = get_my_salon_id()にスコープされているため、
+  // 全サロン横断のプラン変更は特権を持つadminクライアントで行う（上のメールチェックで認可済み）
+  await createAdminClient().from('salons').update({ plan }).eq('id', salonId)
   revalidatePath('/admin')
 }
 
@@ -30,7 +33,7 @@ export default async function AdminPage() {
     redirect('/dashboard')
   }
 
-  const { data: salons } = await supabase
+  const { data: salons } = await createAdminClient()
     .from('salons')
     .select('id, name, plan, plan_expires_at')
     .order('name')
