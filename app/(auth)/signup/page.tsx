@@ -52,32 +52,18 @@ export default function SignupPage() {
         await supabase.auth.signInWithPassword({ email, password })
       }
 
-      // 既にプロフィールがあればスキップ
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('salon_id')
-        .eq('id', userId)
-        .single()
+      // サロン作成とオーナープロフィール作成はsecurity definer RPCに集約。
+      // クライアントから直接insertすると、作成直後の行をRETURNINGで読み返す際に
+      // salonsのSELECTポリシー（自分のサロンのみ閲覧可）に阻まれる
+      // （このユーザーはまだどのサロンにも属していないため）。
+      const { error: createSalonError } = await supabase.rpc('create_salon', {
+        p_name: salonName,
+      })
 
-      if (!existingProfile?.salon_id) {
-        const { data: salon, error: salonError } = await supabase
-          .from('salons')
-          .insert({ name: salonName })
-          .select()
-          .single()
-
-        if (salonError) {
-          setError('サロン作成に失敗しました: ' + salonError.message)
-          setLoading(false)
-          return
-        }
-
-        await supabase.from('profiles').upsert({
-          id: userId,
-          salon_id: salon.id,
-          display_name: salonName,
-          role: 'owner',
-        })
+      if (createSalonError) {
+        setError('サロン作成に失敗しました: ' + createSalonError.message)
+        setLoading(false)
+        return
       }
 
       router.push('/dashboard')

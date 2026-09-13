@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/SignOutButton'
 import InviteSection from '@/components/InviteSection'
@@ -35,6 +36,12 @@ export default async function SettingsPage() {
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">バージョン</p>
           <p className="font-medium text-zinc-400">0.1.0</p>
         </div>
+        {(profile?.role === 'owner' || profile?.role === 'admin') && (
+          <Link href="/settings/staff" className="flex items-center justify-between px-5 py-4">
+            <p className="font-medium text-white">スタッフ管理</p>
+            <span className="text-zinc-500">→</span>
+          </Link>
+        )}
         <InviteSection />
       </div>
 
