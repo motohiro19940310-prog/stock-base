@@ -6,11 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function InviteSignup({
   token,
-  salonId,
   salonName,
 }: {
   token: string
-  salonId: string
   salonName: string
 }) {
   const router = useRouter()
@@ -52,22 +50,23 @@ export default function InviteSignup({
       return
     }
 
-    const { error: profileError } = await supabase.from('profiles').upsert({
-      id: userId,
-      salon_id: salonId,
-      full_name: name,
+    // salon_id・roleはクライアントから直接指定せず、トークンの有効性をサーバー側
+    // (security definer RPC)で検証してから決定する。
+    const { error: acceptError } = await supabase.rpc('accept_invitation', {
+      p_token: token,
+      p_full_name: name,
     })
 
-    if (profileError) {
-      setError(profileError.message)
+    if (acceptError) {
+      const message =
+        acceptError.message === 'token_used' ? 'この招待リンクは既に使用されています' :
+        acceptError.message === 'token_expired' ? 'この招待リンクは期限切れです' :
+        acceptError.message === 'invalid_token' ? '招待リンクが無効です' :
+        acceptError.message
+      setError(message)
       setLoading(false)
       return
     }
-
-    await supabase
-      .from('invitations')
-      .update({ used_at: new Date().toISOString() })
-      .eq('token', token)
 
     router.push('/dashboard')
   }

@@ -12,7 +12,7 @@ export default async function InvitePage({
 
   const { data: invitation } = await supabase
     .from('invitations')
-    .select('id, salon_id, used_at, salons(name)')
+    .select('id, salon_id, used_at, expires_at')
     .eq('token', token)
     .single()
 
@@ -30,8 +30,22 @@ export default async function InvitePage({
     )
   }
 
-  const salons = invitation.salons
-  const salonName = (Array.isArray(salons) ? salons[0] : salons as unknown as { name: string } | null)?.name ?? 'サロン'
+  if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-6">
+        <div className="text-center">
+          <p className="text-4xl mb-4">⏰</p>
+          <h1 className="text-xl font-bold text-white mb-2">この招待リンクは期限切れです</h1>
+          <p className="text-zinc-500 text-sm">オーナーに新しいリンクを発行してもらってください。</p>
+        </div>
+      </div>
+    )
+  }
+
+  // salonsはRLSで自分のサロンしか見えないため（未ログイン状態では何も見えない）、
+  // security definer RPC経由でサロン名だけを取得する。
+  const { data: rpcSalonName } = await supabase.rpc('get_invitation_salon_name', { p_token: token })
+  const salonName = rpcSalonName ?? 'サロン'
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6">
@@ -42,7 +56,7 @@ export default async function InvitePage({
           <h1 className="text-2xl font-bold text-white mb-1">{salonName}</h1>
           <p className="text-zinc-400 text-sm">に参加するアカウントを作成してください</p>
         </div>
-        <InviteSignup token={token} salonId={invitation.salon_id} salonName={salonName} />
+        <InviteSignup token={token} salonName={salonName} />
       </div>
     </div>
   )

@@ -35,7 +35,7 @@ export default async function SettingsPage() {
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">バージョン</p>
           <p className="font-medium text-zinc-400">0.1.0</p>
         </div>
-        <InviteSection salonId={(profile?.salons as { id?: string } | null)?.id ?? profile?.salon_id ?? ''} />
+        <InviteSection />
       </div>
 
       <div className="mt-6">
