@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import InviteSignup from './InviteSignup'
 
@@ -8,13 +8,16 @@ export default async function InvitePage({
   params: Promise<{ token: string }>
 }) {
   const { token } = await params
-  const supabase = await createClient()
 
-  const { data: invitation } = await supabase
+  // invitationsは未ログインでは読めない（トークンの列挙を防ぐため匿名SELECTを許可しない）。
+  // このページはトークンを知っている人だけが到達できるので、サーバー側で1件だけ検索する。
+  const admin = createAdminClient()
+
+  const { data: invitation } = await admin
     .from('invitations')
-    .select('id, salon_id, used_at, expires_at')
+    .select('id, used_at, expires_at, salons(name)')
     .eq('token', token)
-    .single()
+    .maybeSingle()
 
   if (!invitation) notFound()
 
@@ -42,10 +45,8 @@ export default async function InvitePage({
     )
   }
 
-  // salonsはRLSで自分のサロンしか見えないため（未ログイン状態では何も見えない）、
-  // security definer RPC経由でサロン名だけを取得する。
-  const { data: rpcSalonName } = await supabase.rpc('get_invitation_salon_name', { p_token: token })
-  const salonName = rpcSalonName ?? 'サロン'
+  const salons = invitation.salons as { name: string } | { name: string }[] | null
+  const salonName = (Array.isArray(salons) ? salons[0] : salons)?.name ?? 'サロン'
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center px-6">

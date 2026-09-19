@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createInvitation } from '@/app/(app)/settings/actions'
 
-export default function InviteSection() {
+export default function InviteSection({ canInviteAdmin }: { canInviteAdmin: boolean }) {
   const [role, setRole] = useState<'admin' | 'staff'>('staff')
   const [link, setLink] = useState('')
   const [loading, setLoading] = useState(false)
@@ -40,22 +40,24 @@ export default function InviteSection() {
       </div>
       {!link ? (
         <>
-          <div className="flex rounded-xl border border-zinc-800 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setRole('staff')}
-              className={`flex-1 py-2 text-sm font-medium ${role === 'staff' ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-zinc-400'}`}
-            >
-              スタッフ
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('admin')}
-              className={`flex-1 py-2 text-sm font-medium ${role === 'admin' ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-zinc-400'}`}
-            >
-              管理者
-            </button>
-          </div>
+          {canInviteAdmin && (
+            <div className="flex rounded-xl border border-zinc-800 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setRole('staff')}
+                className={`flex-1 py-2 text-sm font-medium ${role === 'staff' ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-zinc-400'}`}
+              >
+                スタッフ
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('admin')}
+                className={`flex-1 py-2 text-sm font-medium ${role === 'admin' ? 'bg-emerald-500 text-white' : 'bg-zinc-900 text-zinc-400'}`}
+              >
+                管理者
+              </button>
+            </div>
+          )}
           <button
             onClick={generateLink}
             disabled={loading}

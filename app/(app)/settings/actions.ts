@@ -18,6 +18,11 @@ export async function createInvitation(role: 'admin' | 'staff'): Promise<CreateI
     throw e
   }
 
+  // 管理者(admin)の招待はオーナーのみ。管理者はスタッフのみ招待できる。
+  if (role === 'admin' && caller.role !== 'owner') {
+    return { error: '管理者を招待できるのはオーナーのみです' }
+  }
+
   const { data, error } = await supabase
     .from('invitations')
     .insert({
