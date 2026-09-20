@@ -28,6 +28,7 @@ export default async function StaffPage() {
   const { data: roleRows } = await admin.from('roles').select('code, rank')
   const rankOf = new Map((roleRows ?? []).map((r) => [r.code as string, r.rank as number]))
   const canReset = caller.permissions.includes('staff.reset_password')
+  const canEditId = caller.permissions.includes('staff.update')
   const canAdd = caller.permissions.includes('staff.create')
 
   const rows = await Promise.all(
@@ -48,6 +49,12 @@ export default async function StaffPage() {
       name={row.full_name ?? row.display_name ?? '(名前未設定)'}
       email={row.email}
       loginId={row.login_id}
+      canEditId={
+        canEditId &&
+        row.status === 'active' &&
+        row.id !== caller.id &&
+        canManage(caller, rankOf.get(row.role) ?? Number.MAX_SAFE_INTEGER)
+      }
       canReset={
         canReset &&
         row.status === 'active' &&

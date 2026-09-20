@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireRole, requirePermission, canManage, PermissionError, type Role } from '@/lib/auth/permissions'
 import { writeAudit } from '@/lib/audit'
-import { credentialLinkExpiry, generateToken, getClientIp } from '@/lib/auth/credentials'
+import { credentialLinkExpiry, generateToken, getClientIp, normalizeLoginId, validateLoginId } from '@/lib/auth/credentials'
 import { randomBytes } from 'crypto'
 
 type ActionResult = { ok: true } | { error: string }
@@ -263,4 +263,59 @@ export async function createResetLink(profileId: string): Promise<LinkResult> {
     ip: await getClientIp(),
   })
   return { path: `/reset/${token}`, expiresAt }
+}
+
+/**
+ * 管理者・オーナーが、下位のロールの人のユーザーIDを変更（未設定の人への設定も可）。
+ * 対象は在職中のみ。自分のIDは「設定」の「ユーザーIDを変更」から変更する。
+ */
+export async function changeStaffLoginId(profileId: string, newIdInput: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  let caller
+  try {
+    caller = await requirePermission(supabase, 'staff.update')
+  } catch (e) {
+    if (e instanceof PermissionError) return { error: 'ユーザーIDを変更する権限がありません' }
+    throw e
+  }
+
+  const newId = normalizeLoginId(String(newIdInput ?? ''))
+  const invalid = validateLoginId(newId)
+  if (invalid) return { error: invalid }
+
+  const admin = createAdminClient()
+  const { data: target } = await admin
+    .from('profiles')
+    .select('id, salon_id, role, status, login_id, full_name, display_name')
+    .eq('id', profileId)
+    .maybeSingle()
+  if (!target || target.salon_id !== caller.salonId) return { error: '対象が見つかりません' }
+  if (target.id === caller.id) return { error: '自分のユーザーIDは「設定」の「ユーザーIDを変更」から変更してください' }
+  if (target.status !== 'active') return { error: '無効化されているスタッフのIDは変更できません' }
+
+  const { data: targetRole } = await admin.from('roles').select('rank').eq('code', target.role).maybeSingle()
+  if (!canManage(caller, targetRole?.rank ?? Number.MAX_SAFE_INTEGER)) {
+    return { error: '自分と同じか上位のロールの人は操作できません' }
+  }
+  if (target.login_id === newId) return { error: '今のユーザーIDと同じです' }
+
+  const { error } = await admin.from('profiles').update({ login_id: newId }).eq('id', profileId)
+  if (error) {
+    if (error.code === '23505') return { error: 'このユーザーIDは既に使われています。別のIDにしてください' }
+    return { error: 'ユーザーIDを変更できませんでした' }
+  }
+
+  await writeAudit({
+    salonId: caller.salonId,
+    actorType: 'salon_user',
+    actorUserId: caller.id,
+    actorLabel: await callerLabel(admin, caller.id),
+    action: 'profile.login_id_changed',
+    targetType: 'profile',
+    targetId: profileId,
+    detail: { from: target.login_id, to: newId, by: 'admin' },
+    ip: await getClientIp(),
+  })
+  revalidatePath('/settings/staff')
+  return { ok: true }
 }

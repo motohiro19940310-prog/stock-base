@@ -57,7 +57,7 @@ export default function SetupIdForm({ salonName, salonCode }: { salonName: strin
           <br />
           同じ名字の人がいて使えないときは、名字.名前にします。例: kondo.yuki
           <br />
-          半角英数字と . _ - が使えます（3〜32文字、大文字は使えません）。
+          半角英数字と . _ - が使えます（3〜32文字、大文字は小文字として登録されます）。
         </p>
       </div>
 

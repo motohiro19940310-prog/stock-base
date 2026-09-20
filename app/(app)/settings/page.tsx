@@ -37,6 +37,10 @@ export default async function SettingsPage() {
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">あなたのユーザーID</p>
           <p className="font-medium text-white">{profile?.login_id ?? '未設定'}</p>
         </div>
+        <Link href="/settings/login-id" className="flex items-center justify-between px-5 py-4">
+          <p className="font-medium text-white">ユーザーIDを変更</p>
+          <span className="text-zinc-500">→</span>
+        </Link>
         <div className="px-5 py-4">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">プラン</p>
           <p className="font-medium text-white">無料プラン</p>

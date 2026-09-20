@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deactivateStaff, reactivateStaff, changeStaffRole, createResetLink } from './actions'
+import { deactivateStaff, reactivateStaff, changeStaffRole, createResetLink, changeStaffLoginId } from './actions'
 import LinkBox from '@/components/LinkBox'
 
 const ROLE_LABEL: Record<string, string> = {
@@ -15,6 +15,7 @@ export default function StaffRow({
   name,
   email,
   loginId,
+  canEditId,
   canReset,
   role,
   status,
@@ -25,6 +26,7 @@ export default function StaffRow({
   name: string
   email: string
   loginId: string | null
+  canEditId: boolean
   canReset: boolean
   role: 'owner' | 'admin' | 'staff'
   status: 'active' | 'inactive'
@@ -33,7 +35,21 @@ export default function StaffRow({
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(false)
+  const [idValue, setIdValue] = useState('')
   const [resetLink, setResetLink] = useState<{ path: string; expiresAt: string } | null>(null)
+
+  function handleSaveId() {
+    setError('')
+    startTransition(async () => {
+      const result = await changeStaffLoginId(id, idValue)
+      if ('error' in result) setError(result.error)
+      else {
+        setEditingId(false)
+        setIdValue('')
+      }
+    })
+  }
 
   function handleReset() {
     if (!confirm(`${name} さんの現在のパスワードは、この操作で直ちに使えなくなります。\n再設定リンクを本人に送り、本人が新しいパスワードを決めるまでログインできません。よろしいですか？`)) return
@@ -102,11 +118,25 @@ export default function StaffRow({
           <span className="text-xs text-zinc-500">{ROLE_LABEL[role]}</span>
         )}
 
+        {canEditId && (
+          <button
+            onClick={() => {
+              setEditingId(!editingId)
+              setIdValue(loginId ?? '')
+              setError('')
+            }}
+            disabled={pending}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 disabled:opacity-40"
+          >
+            ID変更
+          </button>
+        )}
+
         {canReset && (
           <button
             onClick={handleReset}
             disabled={pending}
-            className="ml-auto text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 disabled:opacity-40"
+            className={`${canEditId ? '' : 'ml-auto'} text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 disabled:opacity-40`}
           >
             再設定リンク
           </button>
@@ -116,7 +146,7 @@ export default function StaffRow({
           <button
             onClick={handleToggle}
             disabled={pending}
-            className={`${canReset ? '' : 'ml-auto'} text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-40 ${
+            className={`${canReset || canEditId ? '' : 'ml-auto'} text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-40 ${
               status === 'active'
                 ? 'bg-red-500/15 text-red-400 active:bg-red-500/25'
                 : 'bg-emerald-500/15 text-emerald-400 active:bg-emerald-500/25'
@@ -127,6 +157,25 @@ export default function StaffRow({
         )}
       </div>
 
+      {editingId && (
+        <div className="mt-3 flex gap-2">
+          <input
+            value={idValue}
+            onChange={(e) => setIdValue(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            placeholder="例: tomita"
+            className="flex-1 min-w-0 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-emerald-500 focus:outline-none"
+          />
+          <button
+            onClick={handleSaveId}
+            disabled={pending || !idValue.trim()}
+            className="text-xs font-bold px-3 py-2 rounded-lg bg-emerald-500 text-white disabled:opacity-40"
+          >
+            保存
+          </button>
+        </div>
+      )}
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
       {resetLink && (
         <div className="mt-3">
