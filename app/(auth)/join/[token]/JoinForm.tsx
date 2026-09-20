@@ -54,9 +54,15 @@ export default function JoinForm({ token, salonCode }: { token: string; salonCod
           autoCorrect="off"
           autoComplete="username"
           className={inputClass}
-          placeholder="tanaka"
+          placeholder="例: tanaka"
         />
-        <p className="text-xs text-zinc-600 mt-2">半角英数字と . _ - が使えます（3〜32文字）</p>
+        <p className="text-xs text-zinc-600 mt-2">
+          <span className="text-zinc-400">名字のローマ字にします。例: 田中さん → tanaka</span>
+          <br />
+          同じ名字の人がいて使えないときは、名字.名前にします。例: tanaka.taro
+          <br />
+          半角英数字と . _ - が使えます（3〜32文字、大文字は使えません）。
+        </p>
       </div>
       <div>
         <label className={labelClass}>パスワード（8文字以上）</label>

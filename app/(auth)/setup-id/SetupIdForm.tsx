@@ -34,6 +34,7 @@ export default function SetupIdForm({ salonName, salonCode }: { salonName: strin
         <p className="text-zinc-400">
           今後は「サロンID」と「ユーザーID」とパスワードでログインします。
           パスワードは今までのままです。ユーザーIDを1つ決めてください（1回だけの設定です）。
+          ユーザーIDは「お名前のローマ字」にしてください。
         </p>
         <p className="text-xs text-zinc-500">
           {salonName && <>サロン: {salonName} ／ </>}サロンID: <span className="text-emerald-400 font-bold">{salonCode}</span>
@@ -50,10 +51,14 @@ export default function SetupIdForm({ salonName, salonCode }: { salonName: strin
           autoCapitalize="none"
           autoCorrect="off"
           className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3.5 text-white placeholder-zinc-600 focus:border-emerald-500 focus:outline-none"
-          placeholder="tanaka"
+          placeholder="例: tomita"
         />
         <p className="text-xs text-zinc-600 mt-2">
-          半角英数字と . _ - が使えます（3〜32文字）。お名前などにすると覚えやすいです。
+          <span className="text-zinc-400">名字のローマ字にします。例: 富田さん → tomita</span>
+          <br />
+          同じ名字の人がいて使えないときは、名字.名前にします。例: kondo.yuki
+          <br />
+          半角英数字と . _ - が使えます（3〜32文字、大文字は使えません）。
         </p>
       </div>
 
