@@ -152,7 +152,7 @@ async function callerLabel(admin: ReturnType<typeof createAdminClient>, id: stri
  * 本人が表示名・ユーザーID・パスワードを自分で決めるので、管理者はパスワードに関与しない。
  * 発行できるのは自分より下位のロールのみ（オーナー→管理者/スタッフ、管理者→スタッフ）。
  */
-export async function createSetupLink(role: 'admin' | 'staff', displayNameInput: string): Promise<LinkResult> {
+export async function createSetupLink(role: 'admin' | 'staff', displayNameInput?: string): Promise<LinkResult> {
   const supabase = await createClient()
   let caller
   try {
@@ -162,10 +162,10 @@ export async function createSetupLink(role: 'admin' | 'staff', displayNameInput:
     throw e
   }
 
-  // 発行する側が漢字フルネームを入れる。本人の登録画面にそのまま反映される（本人は変更できない）
-  const displayName = String(displayNameInput ?? '').trim().replace(/\s+/g, ' ')
-  if (displayName.length < 1 || displayName.length > 50) {
-    return { error: 'お名前（漢字フルネーム）を入力してください（50文字以内）' }
+  // 名前は通常、本人が登録画面で入力する。発行側が指定した場合のみ、その名前で固定される（任意）
+  const displayName = String(displayNameInput ?? '').trim().replace(/\s+/g, ' ') || null
+  if (displayName && displayName.length > 50) {
+    return { error: 'お名前は50文字以内で入力してください' }
   }
 
   const admin = createAdminClient()
@@ -193,7 +193,7 @@ export async function createSetupLink(role: 'admin' | 'staff', displayNameInput:
     actorUserId: caller.id,
     actorLabel: await callerLabel(admin, caller.id),
     action: 'staff.setup_link_created',
-    detail: { role, display_name: displayName },
+    detail: displayName ? { role, display_name: displayName } : { role },
     ip: await getClientIp(),
   })
   return { path: `/join/${token}`, expiresAt }

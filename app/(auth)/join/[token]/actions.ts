@@ -48,7 +48,7 @@ export async function completeJoin(input: {
   if (link.role_code !== 'admin' && link.role_code !== 'staff') return { error: INVALID_LINK }
 
   // 名前は発行した管理者が入れたものを使う（本人の入力は無視）。名前なしの旧リンクだけ本人入力を受け付ける
-  const displayName = link.display_name ?? String(input.displayName ?? '').trim()
+  const displayName = link.display_name ?? String(input.displayName ?? '').trim().replace(/\s+/g, ' ')
   if (!displayName || displayName.length > 50) return { error: 'お名前を入力してください（50文字以内）' }
 
   const { data: salon } = await admin.from('salons').select('id, access_status').eq('id', link.salon_id).maybeSingle()

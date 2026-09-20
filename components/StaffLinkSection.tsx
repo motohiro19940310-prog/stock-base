@@ -6,8 +6,6 @@ import LinkBox from './LinkBox'
 
 export default function StaffLinkSection({ canAddAdmin }: { canAddAdmin: boolean }) {
   const [role, setRole] = useState<'admin' | 'staff'>('staff')
-  const [name, setName] = useState('')
-  const [linkName, setLinkName] = useState('')
   const [link, setLink] = useState<{ path: string; expiresAt: string } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -15,13 +13,9 @@ export default function StaffLinkSection({ canAddAdmin }: { canAddAdmin: boolean
   async function generate() {
     setLoading(true)
     setError('')
-    const result = await createSetupLink(role, name)
+    const result = await createSetupLink(role)
     if ('error' in result) setError(result.error)
-    else {
-      setLink(result)
-      setLinkName(name.trim())
-      setName('')
-    }
+    else setLink(result)
     setLoading(false)
   }
 
@@ -30,22 +24,11 @@ export default function StaffLinkSection({ canAddAdmin }: { canAddAdmin: boolean
       <div>
         <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">スタッフを追加</p>
         <p className="text-xs text-zinc-600">
-          追加する人のお名前を入れて、登録リンクを発行します。リンクをLINEなどで本人に送ってください。
-          ユーザーIDとパスワードは本人が自分で決めます（メールアドレスは不要です）。
+          登録リンクをLINEなどで本人に送ってください。お名前（漢字フルネーム）・ユーザーID・パスワードは本人が自分で登録します（メールアドレスは不要です）。
         </p>
       </div>
       {!link ? (
         <>
-          <div>
-            <label className="block text-xs text-zinc-500 mb-1">お名前（漢字フルネーム）</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={50}
-              placeholder="例: 田中 太郎"
-              className="w-full rounded-xl bg-zinc-950 border border-zinc-800 px-4 py-3 text-white placeholder-zinc-600 focus:border-emerald-500 focus:outline-none"
-            />
-          </div>
           {canAddAdmin && (
             <div className="flex rounded-xl border border-zinc-800 overflow-hidden">
               {(['staff', 'admin'] as const).map((r) => (
@@ -62,7 +45,7 @@ export default function StaffLinkSection({ canAddAdmin }: { canAddAdmin: boolean
           )}
           <button
             onClick={generate}
-            disabled={loading || !name.trim()}
+            disabled={loading}
             className="w-full rounded-xl bg-emerald-500 py-3 text-sm font-bold text-white disabled:opacity-40 active:bg-emerald-400"
           >
             {loading ? '発行中...' : '登録リンクを発行する'}
@@ -70,12 +53,7 @@ export default function StaffLinkSection({ canAddAdmin }: { canAddAdmin: boolean
           {error && <p className="text-red-400 text-xs text-center">{error}</p>}
         </>
       ) : (
-        <>
-          <p className="text-sm text-white">
-            {linkName} さん用の登録リンク
-          </p>
-          <LinkBox path={link.path} expiresAt={link.expiresAt} onClose={() => setLink(null)} />
-        </>
+        <LinkBox path={link.path} expiresAt={link.expiresAt} onClose={() => setLink(null)} />
       )}
     </div>
   )

@@ -41,11 +41,14 @@ export default function JoinForm({ token, salonCode, fixedName }: { token: strin
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className={labelClass}>お名前</label>
+        <label className={labelClass}>お名前（漢字フルネーム）</label>
         {fixedName ? (
           <p className="w-full rounded-xl bg-zinc-900/50 border border-zinc-800 px-4 py-3.5 text-white">{fixedName}</p>
         ) : (
-          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required maxLength={50} className={inputClass} placeholder="田中 太郎" />
+          <>
+            <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required maxLength={50} className={inputClass} placeholder="例: 田中 太郎" />
+            <p className="text-xs text-zinc-600 mt-2">スタッフ管理や履歴に表示される名前です。漢字のフルネームで入力してください。</p>
+          </>
         )}
       </div>
       <div>
