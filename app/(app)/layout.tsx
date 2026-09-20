@@ -21,13 +21,18 @@ export default async function AppLayout({
   // ここで毎回statusを見ることで、無効化直後の既存セッションも次の遷移で確実に弾く。
   const { data: profile } = await supabase
     .from('profiles')
-    .select('status')
+    .select('status, login_id')
     .eq('id', user.id)
     .single()
 
   if (profile?.status === 'inactive') {
     await supabase.auth.signOut()
     redirect('/login?reason=deactivated')
+  }
+
+  // 従来のメールログインの人は、初回に1度だけ自分のユーザーIDを決める（サロンID+ユーザーIDでのログインに移行するため）
+  if (profile && !profile.login_id) {
+    redirect('/setup-id')
   }
 
   return (

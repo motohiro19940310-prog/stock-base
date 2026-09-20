@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { deactivateStaff, reactivateStaff, changeStaffRole } from './actions'
+import { deactivateStaff, reactivateStaff, changeStaffRole, createResetLink } from './actions'
+import LinkBox from '@/components/LinkBox'
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -13,6 +14,8 @@ export default function StaffRow({
   id,
   name,
   email,
+  loginId,
+  canReset,
   role,
   status,
   isSelf,
@@ -21,6 +24,8 @@ export default function StaffRow({
   id: string
   name: string
   email: string
+  loginId: string | null
+  canReset: boolean
   role: 'owner' | 'admin' | 'staff'
   status: 'active' | 'inactive'
   isSelf: boolean
@@ -28,6 +33,17 @@ export default function StaffRow({
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [resetLink, setResetLink] = useState<{ path: string; expiresAt: string } | null>(null)
+
+  function handleReset() {
+    if (!confirm(`${name} さんの現在のパスワードは、この操作で直ちに使えなくなります。\n再設定リンクを本人に送り、本人が新しいパスワードを決めるまでログインできません。よろしいですか？`)) return
+    setError('')
+    startTransition(async () => {
+      const result = await createResetLink(id)
+      if ('error' in result) setError(result.error)
+      else setResetLink(result)
+    })
+  }
 
   function handleToggle() {
     setError('')
@@ -54,7 +70,10 @@ export default function StaffRow({
             {name}
             {isSelf && <span className="text-zinc-500 text-xs ml-2">(自分)</span>}
           </p>
-          <p className="text-xs text-zinc-500 truncate">{email}</p>
+          <p className="text-xs text-zinc-500 truncate">
+            {loginId ? <>ユーザーID: <span className="text-zinc-300">{loginId}</span></> : 'ユーザーID未設定'}
+          </p>
+          {email && <p className="text-xs text-zinc-600 truncate">{email}</p>}
         </div>
         <span
           className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full ${
@@ -83,11 +102,21 @@ export default function StaffRow({
           <span className="text-xs text-zinc-500">{ROLE_LABEL[role]}</span>
         )}
 
+        {canReset && (
+          <button
+            onClick={handleReset}
+            disabled={pending}
+            className="ml-auto text-xs font-bold px-3 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 active:bg-zinc-700 disabled:opacity-40"
+          >
+            再設定リンク
+          </button>
+        )}
+
         {!isSelf && (
           <button
             onClick={handleToggle}
             disabled={pending}
-            className={`ml-auto text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-40 ${
+            className={`${canReset ? '' : 'ml-auto'} text-xs font-bold px-3 py-1.5 rounded-lg disabled:opacity-40 ${
               status === 'active'
                 ? 'bg-red-500/15 text-red-400 active:bg-red-500/25'
                 : 'bg-emerald-500/15 text-emerald-400 active:bg-emerald-500/25'
@@ -99,6 +128,11 @@ export default function StaffRow({
       </div>
 
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+      {resetLink && (
+        <div className="mt-3">
+          <LinkBox path={resetLink.path} expiresAt={resetLink.expiresAt} onClose={() => setResetLink(null)} />
+        </div>
+      )}
     </div>
   )
 }
