@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import Link from 'next/link'
 import { loginWithEmail, loginWithSalonId } from './actions'
 
 const inputClass =
@@ -141,11 +140,8 @@ function LoginForm() {
           : 'サロンIDとユーザーIDでログイン'}
       </button>
 
-      <p className="text-center text-sm text-zinc-500 pt-2">
-        アカウントがない方は{' '}
-        <Link href="/signup" className="text-emerald-400 font-medium hover:text-emerald-300">
-          新規登録
-        </Link>
+      <p className="text-center text-xs text-zinc-600 pt-2">
+        スタッフの方は、管理者から届く登録リンクから登録してください
       </p>
     </form>
   )
