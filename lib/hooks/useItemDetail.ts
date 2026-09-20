@@ -12,7 +12,7 @@ export function useItemDetail(id: string, targetMonth?: string) {
       supabase.from('items').select('*').eq('id', id).single(),
       supabase
         .from('stock_logs')
-        .select('*')
+        .select('*, profiles(full_name, display_name)')
         .eq('item_id', id)
         .gte('created_at', range.startOfMonth)
         .lte('created_at', range.endOfMonth)

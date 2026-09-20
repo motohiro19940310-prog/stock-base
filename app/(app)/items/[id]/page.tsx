@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useItemDetail } from '@/lib/hooks/useItemDetail'
 import { createClient } from '@/lib/supabase/client'
+import { operatorName } from '@/lib/operator'
 import StockPanel from '@/components/StockPanel'
 import MonthNav from '../../dashboard/MonthNav'
 
@@ -160,6 +161,7 @@ function ItemDetailContent() {
                       {new Date(log.created_at).toLocaleDateString('ja-JP', {
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                       })}
+                      {operatorName(log.profiles) && <> · {operatorName(log.profiles)}</>}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

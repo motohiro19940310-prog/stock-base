@@ -10,7 +10,7 @@ export function useLogs(targetMonth?: string) {
     const supabase = createClient()
     const { data } = await supabase
       .from('stock_logs')
-      .select('*, item_id, salon_id, items(name, unit)')
+      .select('*, item_id, salon_id, items(name, unit), profiles(full_name, display_name)')
       .gte('created_at', range.startOfMonth)
       .lte('created_at', range.endOfMonth)
       .order('created_at', { ascending: false })

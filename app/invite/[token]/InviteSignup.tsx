@@ -62,6 +62,7 @@ export default function InviteSignup({
         acceptError.message === 'token_used' ? 'この招待リンクは既に使用されています' :
         acceptError.message === 'token_expired' ? 'この招待リンクは期限切れです' :
         acceptError.message === 'invalid_token' ? '招待リンクが無効です' :
+        acceptError.message === 'account_disabled' ? 'このアカウントは無効化されています' :
         acceptError.message
       setError(message)
       setLoading(false)

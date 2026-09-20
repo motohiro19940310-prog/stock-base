@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useLogs } from '@/lib/hooks/useLogs'
 import { createClient } from '@/lib/supabase/client'
+import { operatorName } from '@/lib/operator'
 import MonthNav from '../dashboard/MonthNav'
 
 function LogsSkeleton() {
@@ -105,6 +106,7 @@ function LogsContent() {
                   {new Date(log.created_at).toLocaleDateString('ja-JP', {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                   })}
+                  {operatorName(log.profiles) && <> · {operatorName(log.profiles)}</>}
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
