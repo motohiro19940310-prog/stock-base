@@ -1,8 +1,31 @@
 import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { getSetting } from './credentials'
 
 type Key = { salonCode: string | null; loginId: string | null; ip: string | null }
+type Limits = { max: number; windowMin: number; lockMin: number }
+
+// 設定値はめったに変わらないので、関数インスタンス内で短時間だけ覚えておく（ログインのたびのDB往復を減らす）
+let limitsCache: { at: number; limits: Limits } | null = null
+const LIMITS_TTL_MS = 30_000
+
+async function loadLimits(admin: SupabaseClient): Promise<Limits> {
+  if (limitsCache && Date.now() - limitsCache.at < LIMITS_TTL_MS) return limitsCache.limits
+  const { data } = await admin
+    .from('app_settings')
+    .select('key, value')
+    .in('key', ['login.max_attempts', 'login.window_minutes', 'login.lock_minutes'])
+  const get = (key: string, fallback: number) => {
+    const n = Number(data?.find((r) => r.key === key)?.value)
+    return Number.isFinite(n) && n > 0 ? n : fallback
+  }
+  const limits = {
+    max: get('login.max_attempts', 5),
+    windowMin: get('login.window_minutes', 10),
+    lockMin: get('login.lock_minutes', 10),
+  }
+  limitsCache = { at: Date.now(), limits }
+  return limits
+}
 
 /**
  * 直近の失敗回数がしきい値を超えていればロック中とみなす。
@@ -10,9 +33,7 @@ type Key = { salonCode: string | null; loginId: string | null; ip: string | null
  * ロックの有無から「そのユーザーが存在するか」は分からない。
  */
 export async function isLocked(admin: SupabaseClient, key: Key): Promise<boolean> {
-  const max = await getSetting(admin, 'login.max_attempts', 5)
-  const windowMin = await getSetting(admin, 'login.window_minutes', 10)
-  const lockMin = await getSetting(admin, 'login.lock_minutes', 10)
+  const { max, windowMin, lockMin } = await loadLimits(admin)
   const since = new Date(Date.now() - windowMin * 60_000).toISOString()
   const lockedSince = Date.now() - lockMin * 60_000
 
@@ -31,10 +52,12 @@ export async function isLocked(admin: SupabaseClient, key: Key): Promise<boolean
     return (data?.length ?? 0) >= limit && new Date(data![0].created_at).getTime() > lockedSince
   }
 
-  if (await overLimit('login_id', key.loginId, max)) return true
-  // IPは共有回線（店のWi-Fi）を考慮して緩めに
-  if (await overLimit('ip', key.ip, max * 4)) return true
-  return false
+  // IPは共有回線（店のWi-Fi）を考慮して緩めに。2つの問い合わせは並列で実行する
+  const [byUser, byIp] = await Promise.all([
+    overLimit('login_id', key.loginId, max),
+    overLimit('ip', key.ip, max * 4),
+  ])
+  return byUser || byIp
 }
 
 export async function recordAttempt(admin: SupabaseClient, key: Key, success: boolean): Promise<void> {

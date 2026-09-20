@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { loginWithEmail, loginWithSalonId } from './actions'
 
@@ -10,7 +10,6 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-widest'
 
 function LoginForm() {
-  const router = useRouter()
   const reason = useSearchParams().get('reason')
   const [mode, setMode] = useState<'salon' | 'email'>('salon')
   const [salonCode, setSalonCode] = useState('')
@@ -48,8 +47,8 @@ function LoginForm() {
         localStorage.setItem('stockbase.salonCode', salonCode.trim().toUpperCase())
       } catch {}
     }
-    router.push('/dashboard')
-    router.refresh()
+    // ページ全体を読み込み直して移動する（ログイン直後のセッションで確実に描画し、二重の再描画も避ける）
+    window.location.assign('/dashboard')
   }
 
   return (
