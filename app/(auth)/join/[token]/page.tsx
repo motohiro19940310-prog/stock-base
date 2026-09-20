@@ -11,7 +11,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
 
   const { data: link } = await admin
     .from('credential_links')
-    .select('role_code, expires_at, used_at, salons(name, salon_code, access_status)')
+    .select('role_code, display_name, expires_at, used_at, salons(name, salon_code, access_status)')
     .eq('token_hash', hashToken(token))
     .eq('purpose', 'setup')
     .maybeSingle()
@@ -40,7 +40,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
         <p className="text-xl font-bold text-white">{salon.name}</p>
         <p className="text-xs text-zinc-500 mt-1">サロンID: <span className="text-emerald-400 font-bold">{salon.salon_code}</span></p>
       </div>
-      <JoinForm token={token} salonCode={salon.salon_code} />
+      <JoinForm token={token} salonCode={salon.salon_code} fixedName={link.display_name} />
     </div>
   )
 }

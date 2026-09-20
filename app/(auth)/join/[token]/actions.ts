@@ -26,11 +26,9 @@ export async function completeJoin(input: {
   loginId: string
   password: string
 }): Promise<Result> {
-  const displayName = String(input.displayName ?? '').trim()
   const loginId = normalizeLoginId(String(input.loginId ?? ''))
   const password = String(input.password ?? '')
 
-  if (!displayName || displayName.length > 50) return { error: 'お名前を入力してください（50文字以内）' }
   const idError = validateLoginId(loginId)
   if (idError) return { error: idError }
   const pwError = validatePassword(password, loginId)
@@ -41,13 +39,17 @@ export async function completeJoin(input: {
 
   const { data: link } = await admin
     .from('credential_links')
-    .select('id, salon_id, role_code, expires_at, used_at, created_by')
+    .select('id, salon_id, role_code, display_name, expires_at, used_at, created_by')
     .eq('token_hash', hashToken(String(input.token ?? '')))
     .eq('purpose', 'setup')
     .maybeSingle()
   if (!link || link.used_at || new Date(link.expires_at).getTime() < Date.now()) return { error: INVALID_LINK }
   // リンクでオーナーは作れない（発行側でも制限しているが、ここでも守る）
   if (link.role_code !== 'admin' && link.role_code !== 'staff') return { error: INVALID_LINK }
+
+  // 名前は発行した管理者が入れたものを使う（本人の入力は無視）。名前なしの旧リンクだけ本人入力を受け付ける
+  const displayName = link.display_name ?? String(input.displayName ?? '').trim()
+  if (!displayName || displayName.length > 50) return { error: 'お名前を入力してください（50文字以内）' }
 
   const { data: salon } = await admin.from('salons').select('id, access_status').eq('id', link.salon_id).maybeSingle()
   if (!salon || salon.access_status !== 'active') return { error: INVALID_LINK }

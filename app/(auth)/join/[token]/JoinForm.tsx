@@ -8,9 +8,9 @@ const inputClass =
   'w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3.5 text-white placeholder-zinc-600 focus:border-emerald-500 focus:outline-none'
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-widest'
 
-export default function JoinForm({ token, salonCode }: { token: string; salonCode: string }) {
+export default function JoinForm({ token, salonCode, fixedName }: { token: string; salonCode: string; fixedName: string | null }) {
   const router = useRouter()
-  const [displayName, setDisplayName] = useState('')
+  const [displayName, setDisplayName] = useState(fixedName ?? '')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -42,7 +42,11 @@ export default function JoinForm({ token, salonCode }: { token: string; salonCod
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className={labelClass}>お名前</label>
-        <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required maxLength={50} className={inputClass} placeholder="田中 太郎" />
+        {fixedName ? (
+          <p className="w-full rounded-xl bg-zinc-900/50 border border-zinc-800 px-4 py-3.5 text-white">{fixedName}</p>
+        ) : (
+          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required maxLength={50} className={inputClass} placeholder="田中 太郎" />
+        )}
       </div>
       <div>
         <label className={labelClass}>ユーザーID（ログイン用）</label>
