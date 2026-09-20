@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { completeJoin } from './actions'
 
 const inputClass =
@@ -9,7 +8,6 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-widest'
 
 export default function JoinForm({ token, salonCode, fixedName }: { token: string; salonCode: string; fixedName: string | null }) {
-  const router = useRouter()
   const [displayName, setDisplayName] = useState(fixedName ?? '')
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
@@ -34,8 +32,7 @@ export default function JoinForm({ token, salonCode, fixedName }: { token: strin
     try {
       localStorage.setItem('stockbase.salonCode', salonCode)
     } catch {}
-    router.push('/dashboard')
-    router.refresh()
+    window.location.assign('/dashboard')
   }
 
   return (

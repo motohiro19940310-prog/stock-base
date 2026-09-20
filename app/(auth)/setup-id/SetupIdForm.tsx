@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { setMyLoginId } from './actions'
 
 export default function SetupIdForm({ salonName, salonCode }: { salonName: string; salonCode: string }) {
-  const router = useRouter()
   const [loginId, setLoginId] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -23,8 +21,9 @@ export default function SetupIdForm({ salonName, salonCode }: { salonName: strin
     try {
       localStorage.setItem('stockbase.salonCode', salonCode)
     } catch {}
-    router.push('/dashboard')
-    router.refresh()
+    // ページ全体を読み込み直して移動する。保存後のサーバー再描画（設定済みなら/dashboardへリダイレクト）と
+    // ルーターの遷移が競合して「設定中...」のまま止まることがあったため
+    window.location.assign('/dashboard')
   }
 
   return (

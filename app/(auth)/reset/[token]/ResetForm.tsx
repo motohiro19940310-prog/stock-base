@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { completeReset } from './actions'
 
 const inputClass =
@@ -9,7 +8,6 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-2 uppercase tracking-widest'
 
 export default function ResetForm({ token }: { token: string }) {
-  const router = useRouter()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -29,8 +27,7 @@ export default function ResetForm({ token }: { token: string }) {
       setLoading(false)
       return
     }
-    router.push('/dashboard')
-    router.refresh()
+    window.location.assign('/dashboard')
   }
 
   return (
